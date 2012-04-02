@@ -55,7 +55,7 @@ class smsapi:
     def _wrf(self,data):
         self.http_response += data
 
-    def _communicate(self, request, usecookie = None):
+    def _communicate(self, request, usecookie = None, no_ssl=False):
         """
             Queries API with values from request dictionary, 'format'
         key is overridden for specifying output format. If `usecookie`
@@ -78,6 +78,9 @@ class smsapi:
         curl.setopt(pycurl.URL, api_target)
         curl.setopt(pycurl.POST, True)
         curl.setopt(pycurl.POSTFIELDS, postdata)
+        if no_ssl:
+            curl.setopt(pycurl.SSL_VERIFYHOST, 0)
+            curl.setopt(pycurl.SSL_VERIFYPEER, 0)
         if usecookie != None:
             curl.setopt(pycurl.COOKIE, usecookie)
         self.http_response = ""
@@ -125,9 +128,10 @@ class smsapi:
         self.cookie = None # Session cookie to be set after logging in
         self.JD = JSONDecoder()
 
-    def login(self):
+    def login(self, no_ssl=False):
         """ Authenticates to api to get session ID for future use. Exceptions: auth, interface. """
-        resp = self._communicate({'method':'login', 'email':self.email, 'password':self.password})
+        resp = self._communicate({'method':'login', 'email':self.email, 'password':self.password}, 
+            no_ssl=no_ssl)
         if resp[0][0] != 0:
             raise smsapi_auth_exception(resp[0][0])
         try:
@@ -139,7 +143,7 @@ class smsapi:
 
     def push_msg(self, text, phone, sender_name = None, Unicode = None,
         Type = None, validity = None, dlr_mask = None, dlr_url = None,
-        nologin = False):
+        nologin = False, no_ssl=False):
         """
             Sends SMS message via api.
             Parameters 'text' and 'phone' are mandatory, text is 
@@ -195,7 +199,7 @@ class smsapi:
             else:
                 raise smsapi_nologin_exception("Not logged in")
 
-        resp = self._communicate(req, usecookie)
+        resp = self._communicate(req, usecookie, no_ssl=no_ssl)
         if resp[0][0] == 36:
             raise smsapi_balance_exception("No money")
         if resp[0][0] == 3:
